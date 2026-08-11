@@ -9,6 +9,10 @@
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
+    // TypeScript 7 no longer pulls in @types/* implicitly the way 5.x did,
+    // so name what this package actually needs: Node globals (setInterval,
+    // NodeJS.Timeout).
+    "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true

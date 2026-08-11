@@ -150,13 +150,9 @@ and the plugin entry point is a `export default function (app) {...}`, which is
 what the server's loader calls.
 
 `test/encoded.test.ts` asserts the exact bytes that were confirmed to sound and
-silence real hardware. It needs an encoder, which the server normally provides:
-
-```sh
-npm install --no-save @canboat/canboatjs
-```
-
-Without it those three tests skip, with a warning, rather than failing.
+silence real hardware. It needs an encoder, which at runtime the server
+provides; `@canboat/canboatjs` is a devDependency so those assertions also run
+in CI. It is deliberately not a runtime dependency.
 
 See [AGENTS.md](./AGENTS.md) for the full contributor guidance.
 

@@ -79,10 +79,10 @@ extension is required even though the file on disk is `.ts`.
 `test/encoded.test.ts` pins the **exact bytes** that were confirmed to sound and
 silence a real ALM100. If a change makes those tests fail, the change is wrong
 until proven otherwise on hardware — do not adjust the expected bytes to match
-new output. It skips when `@canboat/canboatjs` is not installed, since the encoder belongs
-to the server rather than to this package — but it prints a warning when it
-does, so a green run cannot quietly hide the tests that matter most. Install it
-with `npm install --no-save @canboat/canboatjs` to run them.
+new output. `@canboat/canboatjs` is a devDependency purely so these run in CI. It is not a
+runtime dependency — the server owns the encoder — so it must never move to
+`dependencies`. If it is ever missing the suite still passes, but those three
+tests skip with a warning rather than failing silently.
 
 Two encoding rules are load-bearing and each has a test:
 
@@ -93,6 +93,36 @@ Two encoding rules are load-bearing and each has a test:
    ([canboat/canboatjs#458](https://github.com/canboat/canboatjs/issues/458)).
 2. Pattern when silencing must be an explicit `0xffff`. Left undefined,
    canboat-wasm throws and canboatjs silently drops a byte.
+
+## CI and releasing
+
+`.github/workflows/signalk-ci.yml` calls SignalK's shared reusable plugin
+workflow on every push and pull request: Linux x64, Linux arm64, macOS and
+Windows, on Node 20, 22 and 24, plus an integration run that installs the plugin
+into a real server. Node 20 is in the matrix on purpose — `engines.node` is
+`>=20.19`, the first release where the server's loader can `require()` an ESM
+plugin, and testing it keeps that floor honest rather than assumed.
+`npm run ci-lint` runs as a blocking format check. armv7 (Cerbo GX) is opt-in
+through the manual trigger.
+
+Releases are tag-driven. Pushing a `v*` tag runs
+`.github/workflows/publish.yml`, which creates the GitHub release and publishes
+to npm:
+
+```sh
+npm version minor        # or patch / major
+git push --follow-tags
+```
+
+Publishing uses **npm trusted publishing over OIDC**: the workflow requests
+`id-token: write` and npm mints a short-lived credential from it. There is no
+npm token in the repository secrets, and none should ever be added — adding one
+would quietly replace a scoped, expiring credential with a long-lived one.
+Packages are published with `--provenance`, so npm records which workflow and
+commit built them.
+
+Tags containing `-beta.` or `-rc.` publish under the `beta` dist-tag rather than
+`latest`.
 
 ## Working on the protocol
 

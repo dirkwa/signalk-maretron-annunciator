@@ -1,0 +1,52 @@
+{
+  "name": "signalk-maretron-annunciator",
+  "version": "0.1.0",
+  "description": "Sound a Maretron ALM100 annunciator from Signal K notifications",
+  "main": "dist/index.js",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.6",
+    "@types/chai": "^4.3.16",
+    "@types/lodash": "^4.17.7",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^20.14.0",
+    "chai": "^4.4.1",
+    "mocha": "^10.7.0",
+    "prettier": "^3.3.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "build": "tsc -b --pretty false",
+    "watch": "tsc --watch --pretty false",
+    "test": "mocha",
+    "prettier": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "ci-lint": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "ci-test": "npm run build && npm run ci-lint && npm test",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-category-nmea-2000",
+    "signalk-category-notifications",
+    "maretron",
+    "annunciator",
+    "alarm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dirkwa/signalk-maretron-annunciator.git"
+  },
+  "author": "Dirk Wahrheit",
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

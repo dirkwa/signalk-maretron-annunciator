@@ -15,6 +15,9 @@ import { AlertIds, isSounding, severityOf, wantsSound } from './alerts'
 
 const PLUGIN_ID = 'signalk-maretron-annunciator'
 
+/** Node cannot hold a timer longer than 2^31-1 ms without wrapping. */
+const MAX_REPEAT_SECONDS = Math.floor((2 ** 31 - 1) / 1000)
+
 /** Pseudo-path used to allocate a stable alert id for manual PUT control. */
 const MANUAL_PATH = '\u0000manual'
 
@@ -139,7 +142,9 @@ module.exports = function (app: any) {
         description:
           'The annunciator keeps sounding on its own; this only guards against a command being missed. 0 disables it.',
         default: 30,
-        minimum: 0
+        minimum: 0,
+        maximum: MAX_REPEAT_SECONDS,
+        multipleOf: 1
       }
     }
   })
@@ -150,7 +155,9 @@ module.exports = function (app: any) {
       deviceAddress: opts.deviceAddress,
       instance: opts.instance ?? 0,
       alertIdBase: opts.alertIdBase ?? 40000,
-      states: opts.states?.length ? opts.states : ['alarm', 'emergency'],
+      // An explicitly empty list means "never sound for notifications", which
+      // leaves the PUT handler as the only way to sound the device.
+      states: opts.states ?? ['alarm', 'emergency'],
       patternFor: opts.patternFor ?? [],
       defaultPattern: opts.defaultPattern ?? 4,
       repeatSeconds: opts.repeatSeconds ?? 30
@@ -417,12 +424,16 @@ module.exports = function (app: any) {
 
   function startRepeat(alertId: number, pattern: number) {
     stopRepeat()
-    if (options.repeatSeconds > 0) {
-      repeatTimer = setInterval(
-        () => send(true, alertId, pattern),
-        options.repeatSeconds * 1000
-      )
+    if (options.repeatSeconds <= 0) {
+      return
     }
+    // Node wraps any delay over 2^31-1 ms to 1 ms, which would turn a silly
+    // config value into a flood of frames on the bus.
+    const seconds = Math.min(options.repeatSeconds, MAX_REPEAT_SECONDS)
+    repeatTimer = setInterval(
+      () => send(true, alertId, pattern),
+      seconds * 1000
+    )
   }
 
   function stopRepeat() {

@@ -3,7 +3,7 @@ import {
   annunciatorCapabilities,
   identifyAnnunciator,
   productDetails
-} from '../src/device'
+} from '../src/device.js'
 
 /*
  * The fixtures below are real decoded PGNs from a Maretron ALM100, taken from

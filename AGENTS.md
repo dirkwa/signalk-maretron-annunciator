@@ -15,19 +15,37 @@ Read `README.md` before changing anything that builds a PGN.
 
 ## Module format
 
-**CommonJS, built with `tsc`.** Not ESM, and no bundler.
+**ESM, built with `tsc`.** No bundler.
 
-- `package.json` has no `"type"` field, so `.js` in `dist/` is CommonJS.
-- `tsconfig.json` extends `@tsconfig/node20`, which sets `module: nodenext`.
-- The entry point uses `module.exports = function (app) {...}`, which is the
-  plugin shape the server calls.
+- `package.json` has `"type": "module"`, so `.js` in `dist/` is an ES module.
+- `tsconfig.json` sets `module` and `moduleResolution` to `nodenext`.
+- The entry point is `export default function (app) {...}`.
 
-This is deliberate, not an oversight. The server loads plugins through
-`importOrRequire()` (`src/modules.ts`), which tries `require()` first and falls
-back to `import()`, so both formats work — but CommonJS is what every plugin in
-the ecosystem ships, it is what the `module.exports` plugin contract expects,
-and there is nothing here that needs bundling. Do not convert it to ESM or add
-Vite without a concrete reason.
+Three things follow from that, and each will bite if forgotten:
+
+1. **Relative imports need an explicit `.js` extension**, including in `.ts`
+   source: `import { buildCommand } from './command.js'`. The specifier refers
+   to the emitted file, not the TypeScript source. `tsc` will not add it for
+   you and Node will not guess.
+2. **The default export is the contract.** The server does
+   `pluginConstructor = await importOrRequire(moduleDir)` and then calls
+   `pluginConstructor(app)`; `importOrRequire` returns `mod.default ?? mod`
+   (`src/modules.ts`). A named export or a `module.exports` assignment will not
+   be found.
+3. **There is no `require` and no `__dirname`.** Use `await import()` for
+   optional dependencies — `test/encoded.test.ts` does this for
+   `@canboat/canboatjs` — and `import.meta.url` if a path is ever needed.
+
+The server loads plugins through `importOrRequire()`, which calls `require()`
+first and falls back to `import()`. On Node 20.19+ and 22+, `require()` can load
+ESM directly, so the first path succeeds and `mod.default` is picked up; on
+older runtimes the `import()` fallback handles it. Both routes are exercised —
+`npm test` runs the suite as ESM, and the plugin has been loaded through a
+`require()` shim matching the server's own logic.
+
+No bundler is needed: this is four small modules with one runtime dependency.
+Vite would earn its place only if a webapp or admin-UI panel were added, since
+those need module federation. Do not add one otherwise.
 
 ## Commits
 
@@ -54,11 +72,17 @@ npm run ci-test      # build, format check, then the suite
 npm test             # the suite alone
 ```
 
+Mocha runs the TypeScript directly through `tsx` (`.mocharc.json`), which
+handles ESM without a build step. Tests import from `../src/*.js` — the `.js`
+extension is required even though the file on disk is `.ts`.
+
 `test/encoded.test.ts` pins the **exact bytes** that were confirmed to sound and
 silence a real ALM100. If a change makes those tests fail, the change is wrong
 until proven otherwise on hardware — do not adjust the expected bytes to match
-new output. It skips cleanly when `@canboat/canboatjs` is not installed, since
-the encoder belongs to the server rather than to this package.
+new output. It skips when `@canboat/canboatjs` is not installed, since the encoder belongs
+to the server rather than to this package — but it prints a warning when it
+does, so a green run cannot quietly hide the tests that matter most. Install it
+with `npm install --no-save @canboat/canboatjs` to run them.
 
 Two encoding rules are load-bearing and each has a test:
 

@@ -5,13 +5,13 @@
  * and silences it when they clear.
  */
 
-import { buildCommand, PATTERN_MAX, PATTERN_MIN } from './command'
+import { buildCommand, PATTERN_MAX, PATTERN_MIN } from './command.js'
 import {
   annunciatorCapabilities,
   identifyAnnunciator,
   productDetails
-} from './device'
-import { AlertIds, isSounding, severityOf, wantsSound } from './alerts'
+} from './device.js'
+import { AlertIds, isSounding, severityOf, wantsSound } from './alerts.js'
 
 const PLUGIN_ID = 'signalk-maretron-annunciator'
 
@@ -32,7 +32,7 @@ interface Options {
   repeatSeconds: number
 }
 
-module.exports = function (app: any) {
+export default function (app: any) {
   const plugin: any = {}
   const unsubscribes: (() => void)[] = []
 

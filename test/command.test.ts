@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { buildCommand } from '../src/command'
+import { buildCommand } from '../src/command.js'
 
 /*
  * The two frames below are the contract. They were captured from a real

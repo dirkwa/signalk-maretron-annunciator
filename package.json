@@ -2,6 +2,7 @@
   "name": "signalk-maretron-annunciator",
   "version": "0.1.0",
   "description": "Sound a Maretron ALM100 annunciator from Signal K notifications",
+  "type": "module",
   "main": "dist/index.js",
   "dependencies": {
     "lodash": "^4.17.21"
@@ -15,7 +16,7 @@
     "chai": "^4.4.1",
     "mocha": "^10.7.0",
     "prettier": "^3.3.3",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.0",
     "typescript": "^5.8.3"
   },
   "scripts": {
@@ -48,10 +49,16 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19"
   },
   "signalk": {
     "displayName": "Maretron Annunciator",
     "appIcon": "./app-icon.svg"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   }
 }

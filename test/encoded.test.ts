@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { buildCommand } from '../src/command'
+import { buildCommand } from '../src/command.js'
 
 /*
  * The bytes are the real contract, so pin them.
@@ -22,16 +22,25 @@ const SILENCE_20493 =
 
 describe('encoded frames', function () {
   let encode: ((pgn: any) => string) | undefined
+  let FromPgn: any
 
-  before(function () {
+  before(async function () {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const canboatjs = require('@canboat/canboatjs')
-      encode = canboatjs.pgnToActisenseSerialFormat
+      const canboatjs = await import('@canboat/canboatjs')
+      const mod: any = (canboatjs as any).default ?? canboatjs
+      encode = mod.pgnToActisenseSerialFormat
+      FromPgn = mod.FromPgn
     } catch {
       encode = undefined
     }
     if (!encode) {
+      // Skipping rather than failing is deliberate: the encoder belongs to the
+      // server, not to this package. But these are the tests that pin the
+      // bytes confirmed against real hardware, so say so loudly rather than
+      // letting a green run hide them.
+      console.warn(
+        '\n  ! @canboat/canboatjs not installed: the byte-level frame tests did NOT run.\n'
+      )
       this.skip()
     }
   })
@@ -69,8 +78,6 @@ describe('encoded frames', function () {
   it('produces a frame the decoder reads back as Maretron, not B&G', () => {
     // The failure this guards against is silent: without the narrowing pairs
     // the frame decodes as bGKeyValueData with a bogus key, and nothing errors.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { FromPgn } = require('@canboat/canboatjs')
     const parser = new FromPgn({})
     const line = encode!(
       withSrc(

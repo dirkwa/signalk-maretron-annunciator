@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { AlertIds, isSounding, severityOf, wantsSound } from '../src/alerts'
+import { AlertIds, isSounding, severityOf, wantsSound } from '../src/alerts.js'
 
 describe('wantsSound', () => {
   it('accepts a notification asking to be heard', () => {

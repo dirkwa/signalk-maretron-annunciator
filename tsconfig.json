@@ -1,6 +1,11 @@
 {
   "extends": "@tsconfig/node20/tsconfig.json",
   "compilerOptions": {
+    // ESM: "module": "nodenext" plus "type": "module" in package.json means
+    // tsc emits real ES modules, and relative imports need explicit .js
+    // extensions (they refer to the emitted file, not the .ts source).
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,

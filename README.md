@@ -20,6 +20,11 @@ npm install signalk-maretron-annunciator
 You need a NMEA 2000 connection that can transmit. The plugin refuses to send
 anything until the server reports one.
 
+**Node 20.19 or newer.** The plugin is an ES module, and that is the first
+release where the server's plugin loader can `require()` one directly. Older
+Node 20 builds fall back to a dynamic `import()`, which also works, but 20.19+
+is the supported floor.
+
 ## Configuring
 
 Most installations need nothing beyond turning it on. The annunciator's address
@@ -127,6 +132,32 @@ not have to talk to the annunciator.
 - Field 7 is sent as the constant 23. It was 23 in every frame ever captured,
   from Maretron's own software and from replayed commands alike, and nothing has
   been seen to vary it.
+
+## Development
+
+```sh
+npm install
+npm run build          # tsc -> dist/
+npm test               # mocha via tsx, no build step needed
+npm run ci-test        # build, format check, tests
+```
+
+The package is an **ES module** (`"type": "module"`, `module: nodenext`, no
+bundler), so relative imports carry an explicit `.js` extension even in the
+TypeScript source — the specifier names the emitted file, not the `.ts` one —
+and the plugin entry point is a `export default function (app) {...}`, which is
+what the server's loader calls.
+
+`test/encoded.test.ts` asserts the exact bytes that were confirmed to sound and
+silence real hardware. It needs an encoder, which the server normally provides:
+
+```sh
+npm install --no-save @canboat/canboatjs
+```
+
+Without it those three tests skip, with a warning, rather than failing.
+
+See [AGENTS.md](./AGENTS.md) for the full contributor guidance.
 
 ## License
 

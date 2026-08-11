@@ -10,7 +10,7 @@
   "devDependencies": {
     "@canboat/canboatjs": "^3.20.0",
     "@tsconfig/node20": "^20.1.6",
-    "@types/chai": "^4.3.16",
+    "@types/chai": "^5.2.3",
     "@types/lodash": "^4.17.7",
     "@types/mocha": "^10.0.7",
     "@types/node": "^20.14.0",

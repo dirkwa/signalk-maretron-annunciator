@@ -103,7 +103,7 @@ the device, targeting PGN 130824 and writing that PGN's fields**:
 | 8 | Alert ID | the alert being sounded | same |
 
 While sounding, the device's own 130824 reports state 100, the pattern and the
-alert id, at 1 Hz instead of its usual 10 second idle beacon — so you can
+alert id, at 1 Hz instead of its usual 10-second idle beacon — so you can
 confirm it is working from the bus rather than by ear.
 
 Parameters 1 and 3 are not decoration. PGN 130824 has two variants —
@@ -127,8 +127,9 @@ not have to talk to the annunciator.
 - Only the ALM100 has been tested. Other Maretron annunciators use the same
   PGNs and should work, but the discovery check for a non-ALM100 relies on the
   device's address claim rather than its product code.
-- Only annunciator instance 0 has been observed in the wild. The instance is a
-  field and is configurable here, but nothing else has been tried.
+- Only annunciator instance 0 has been observed, and only instance 0 has been
+  tested. The instance is a field in the command and is configurable here, but
+  no other value has been tried against hardware.
 - Field 7 is sent as the constant 23. It was 23 in every frame ever captured,
   from Maretron's own software and from replayed commands alike, and nothing has
   been seen to vary it.

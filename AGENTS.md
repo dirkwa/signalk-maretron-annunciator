@@ -44,14 +44,14 @@ older runtimes the `import()` fallback handles it. Both routes are exercised —
 `require()` shim matching the server's own logic.
 
 No bundler is needed: this is four small modules with one runtime dependency.
-Vite would earn its place only if a webapp or admin-UI panel were added, since
-those need module federation. Do not add one otherwise.
+A bundler such as Vite would earn its place only if a webapp or admin-UI panel
+were added, since those need module federation. Do not add one otherwise.
 
 ## Commits
 
 **Angular style**, as `<type>(<scope>): <subject>`:
 
-```
+```text
 feat(command): add a pattern override per notification state
 fix: cap the repeat interval so it cannot wrap Node's timer
 docs: explain how alert ids are allocated

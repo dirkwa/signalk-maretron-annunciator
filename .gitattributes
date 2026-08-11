@@ -1,0 +1,13 @@
+# Normalize line endings so checkouts are byte-stable across platforms,
+# whatever the host's core.autocrlf is set to. Text is stored and checked out
+# as LF.
+
+* text=auto eol=lf
+
+# Keep the icon from being diffed as prose in reviews; it is authored by hand
+# but read as an image.
+*.svg linguist-language=SVG
+
+# Generated output and lockfiles are noise in a diff.
+dist/** linguist-generated=true
+package-lock.json linguist-generated=true

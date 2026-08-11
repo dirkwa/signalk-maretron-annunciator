@@ -1,3 +1,5 @@
+<img src="app-icon.svg" alt="" width="96" align="right">
+
 # signalk-maretron-annunciator
 
 Sound a Maretron ALM100 annunciator when Signal K notifications go active, and

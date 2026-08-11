@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Maretron annunciator">
+  <title>Maretron Annunciator</title>
+
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d4b5c"/>
+      <stop offset="1" stop-color="#222b36"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b6b7f"/>
+      <stop offset="1" stop-color="#2c3642"/>
+    </linearGradient>
+    <radialGradient id="lens" cx="0.35" cy="0.3" r="0.85">
+      <stop offset="0" stop-color="#ffd97a"/>
+      <stop offset="0.45" stop-color="#f5a623"/>
+      <stop offset="1" stop-color="#c8720a"/>
+    </radialGradient>
+  </defs>
+
+  <!-- rounded square backdrop so the mark reads at small sizes -->
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#body)"/>
+
+  <!-- sound radiating to the left and right of the horn -->
+  <g fill="none" stroke="#f5a623" stroke-linecap="round" opacity="0.95">
+    <path d="M150 214a86 86 0 0 0 0 84" stroke-width="20"/>
+    <path d="M106 186a140 140 0 0 0 0 140" stroke-width="17" opacity="0.62"/>
+    <path d="M362 214a86 86 0 0 1 0 84" stroke-width="20"/>
+    <path d="M406 186a140 140 0 0 1 0 140" stroke-width="17" opacity="0.62"/>
+  </g>
+
+  <!-- the annunciator: a bezel and a lit lens -->
+  <circle cx="256" cy="256" r="112" fill="url(#ring)"/>
+  <circle cx="256" cy="256" r="112" fill="none" stroke="#0f151c" stroke-width="10" opacity="0.55"/>
+  <circle cx="256" cy="256" r="82" fill="url(#lens)"/>
+
+  <!-- highlight, so the lens looks lit rather than flat -->
+  <ellipse cx="228" cy="222" rx="40" ry="27" fill="#fff3cf" opacity="0.5"/>
+
+  <!-- exclamation, marking it as an alarm device -->
+  <g fill="#221a08">
+    <rect x="245" y="206" width="22" height="66" rx="11"/>
+    <circle cx="256" cy="298" r="13"/>
+  </g>
+</svg>

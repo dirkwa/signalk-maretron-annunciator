@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Dirk Wahrheit
+
 import { expect } from 'chai'
 import { AlertIds, isSounding, severityOf, wantsSound } from '../src/alerts.js'
 

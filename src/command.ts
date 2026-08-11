@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Dirk Wahrheit
+
 /*
  * Building the NMEA 2000 command that drives a Maretron ALM100 annunciator.
  *

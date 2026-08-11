@@ -4,11 +4,8 @@
 # Calls the shared SignalK reusable workflow which tests this
 # plugin across Linux x64, Linux arm64, macOS, and Windows.
 #
-# Node matrix is 20, 22 and 24. This plugin is an ES module and
-# declares engines.node >=20.19, which is the first release where
-# the server's plugin loader can require() an ESM plugin
-# directly; testing 20 keeps that floor honest rather than
-# assumed. armv7/Cerbo GX is opt-in via the manual trigger.
+# Node matrix is 22 and 24, matching engines.node >=22.
+# armv7/Cerbo GX is opt-in via the manual trigger.
 # ─────────────────────────────────────────────────────────────
 
 name: SignalK Plugin CI
@@ -43,9 +40,9 @@ on:
         default: ""
         type: string
       node-versions:
-        description: 'JSON array of Node versions, example: ["20","22","24"]'
+        description: 'JSON array of Node versions, example: ["22","24"]'
         required: false
-        default: '["20", "22", "24"]'
+        default: '["22", "24"]'
         type: string
       enable-armv7:
         description: Run armv7 (Cerbo GX) tests via QEMU
@@ -72,7 +69,7 @@ jobs:
       test-command: npm test
       build-command: npm run build --if-present
       format-check-command: npm run ci-lint
-      node-versions: '["20", "22", "24"]'
+      node-versions: '["22", "24"]'
       enable-armv7: false
       enable-signalk-integration: true
       signalk-server-versions: '["latest"]'

@@ -20,10 +20,9 @@ npm install signalk-maretron-annunciator
 You need a NMEA 2000 connection that can transmit. The plugin refuses to send
 anything until the server reports one.
 
-**Node 20.19 or newer.** The plugin is an ES module, and that is the first
-release where the server's plugin loader can `require()` one directly. Older
-Node 20 builds fall back to a dynamic `import()`, which also works, but 20.19+
-is the supported floor.
+**Node 22 or newer.** The plugin is an ES module; the server's plugin loader
+handles that on any supported runtime, but 22 is the floor this is built and
+tested against.
 
 ## Configuring
 

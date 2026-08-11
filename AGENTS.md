@@ -37,11 +37,10 @@ Three things follow from that, and each will bite if forgotten:
    `@canboat/canboatjs` — and `import.meta.url` if a path is ever needed.
 
 The server loads plugins through `importOrRequire()`, which calls `require()`
-first and falls back to `import()`. On Node 20.19+ and 22+, `require()` can load
-ESM directly, so the first path succeeds and `mod.default` is picked up; on
-older runtimes the `import()` fallback handles it. Both routes are exercised —
-`npm test` runs the suite as ESM, and the plugin has been loaded through a
-`require()` shim matching the server's own logic.
+first and falls back to `import()`. On Node 22, `require()` can load ESM
+directly, so the first path succeeds and `mod.default` is picked up. Both routes
+are exercised — `npm test` runs the suite as ESM, and CI installs the plugin
+into a real server on every supported Node version.
 
 No bundler is needed: this is four small modules with one runtime dependency.
 A bundler such as Vite would earn its place only if a webapp or admin-UI panel
@@ -98,12 +97,11 @@ Two encoding rules are load-bearing and each has a test:
 
 `.github/workflows/signalk-ci.yml` calls SignalK's shared reusable plugin
 workflow on every push and pull request: Linux x64, Linux arm64, macOS and
-Windows, on Node 20, 22 and 24, plus an integration run that installs the plugin
-into a real server. Node 20 is in the matrix on purpose — `engines.node` is
-`>=20.19`, the first release where the server's loader can `require()` an ESM
-plugin, and testing it keeps that floor honest rather than assumed.
+Windows, on Node 22 and 24, plus an integration run that installs the plugin
+into a real server. That matches `engines.node` of `>=22`.
 `npm run ci-lint` runs as a blocking format check. armv7 (Cerbo GX) is opt-in
-through the manual trigger.
+through the manual trigger — note it runs Node 20 on Venus OS, which is below
+this plugin's floor.
 
 Releases are tag-driven. Pushing a `v*` tag runs
 `.github/workflows/publish.yml`, which creates the GitHub release and publishes

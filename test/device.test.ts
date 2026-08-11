@@ -51,8 +51,15 @@ describe('identifyAnnunciator', () => {
     expect(identifyAnnunciator(ADDRESS_CLAIM)).to.equal(164)
   })
 
-  it('recognises product information by product code', () => {
-    expect(identifyAnnunciator(PRODUCT_INFO)).to.equal(164)
+  it('confirms product information only for an already-known address', () => {
+    // 126996 carries no manufacturer code, and product codes are only unique
+    // within a manufacturer, so it must not identify a device on its own.
+    expect(identifyAnnunciator(PRODUCT_INFO)).to.equal(undefined)
+    expect(identifyAnnunciator(PRODUCT_INFO, new Set([164]))).to.equal(164)
+  })
+
+  it('does not confirm product information for some other address', () => {
+    expect(identifyAnnunciator(PRODUCT_INFO, new Set([99]))).to.equal(undefined)
   })
 
   it('accepts a numeric manufacturer code', () => {
@@ -103,7 +110,7 @@ describe('identifyAnnunciator', () => {
       src: 33,
       fields: { 'Product Code': 4319, 'Model ID': 'J2K100' }
     }
-    expect(identifyAnnunciator(tlm)).to.equal(undefined)
+    expect(identifyAnnunciator(tlm, new Set([33]))).to.equal(undefined)
   })
 
   it('ignores unrelated PGNs and junk', () => {

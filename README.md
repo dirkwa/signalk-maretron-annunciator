@@ -70,8 +70,13 @@ curl -X PUT -H 'Content-Type: application/json' \
   http://localhost:3000/signalk/v1/api/vessels/self/electrical/annunciators/0/state
 ```
 
-Send `false` to silence it. The plugin status in the server UI shows the
-discovered device and whether it is currently sounding.
+Send `false` to hand control back to the notifications. A real notification
+always wins over this switch, so leaving a test switched on cannot mask an
+actual alarm; and switching it off while something is still active leaves the
+annunciator sounding for that.
+
+The plugin status in the server UI shows the discovered device and whether it is
+currently sounding.
 
 ## How it works
 
@@ -94,7 +99,7 @@ While sounding, the device's own 130824 reports state 100, the pattern and the
 alert id, at 1 Hz instead of its usual 10 second idle beacon — so you can
 confirm it is working from the bus rather than by ear.
 
-Parameters 1 and 3 are not decoration. PRN 130824 has two variants —
+Parameters 1 and 3 are not decoration. PGN 130824 has two variants —
 `bGKeyValueData` and `maretronAnnunciator` — and without those pairs an encoder
 resolves the target to the wrong one and emits a frame that its own decoder
 reads back as a different message. See

@@ -21,17 +21,24 @@ export interface FoundDevice {
 /**
  * Recognise an annunciator from an inbound PGN.
  *
- * Two independent signals, either sufficient:
+ * The authoritative signal is 60928 ISO Address Claim carrying Maretron's
+ * manufacturer code with Device Function "Alarm Enunciator" and Device Class
+ * "Safety systems". That needs no product code, so it also covers Maretron
+ * annunciators that are not an ALM100.
  *
- *  - 60928 ISO Address Claim with Device Function "Alarm Enunciator" and
- *    Device Class "Safety systems". This needs no product code and so also
- *    covers Maretron annunciators that are not an ALM100.
- *  - 126996 Product Information with product code 8165.
+ * 126996 Product Information carries a product code but, unlike the address
+ * claim, has no manufacturer field of its own -- product codes are only unique
+ * within a manufacturer. So a 126996 is accepted only to confirm an address
+ * already identified by an address claim, never to identify one on its own;
+ * pass the set of addresses confirmed so far as `known`.
  *
  * Returns the source address if this PGN identifies an annunciator, else
  * undefined. `pgn` is a decoded canboat object as delivered by the server.
  */
-export function identifyAnnunciator(pgn: any): number | undefined {
+export function identifyAnnunciator(
+  pgn: any,
+  known?: ReadonlySet<number>
+): number | undefined {
   if (!pgn || typeof pgn.src !== 'number') {
     return undefined
   }
@@ -51,7 +58,7 @@ export function identifyAnnunciator(pgn: any): number | undefined {
     return undefined
   }
 
-  if (pgn.pgn === 126996) {
+  if (pgn.pgn === 126996 && known?.has(pgn.src)) {
     const code = f['Product Code'] ?? f.productCode
     if (Number(code) === ALM100_PRODUCT_CODE) {
       return pgn.src

@@ -15,6 +15,9 @@ import { AlertIds, isSounding, severityOf, wantsSound } from './alerts'
 
 const PLUGIN_ID = 'signalk-maretron-annunciator'
 
+/** Pseudo-path used to allocate a stable alert id for manual PUT control. */
+const MANUAL_PATH = '\u0000manual'
+
 interface Options {
   enabled: boolean
   deviceAddress: number | undefined
@@ -39,7 +42,12 @@ module.exports = function (app: any) {
   const active = new Map<string, any>()
   // the alert id we last told the device to sound, so we can silence that one
   let sounding: number | undefined
+  // set by the PUT handler; sounds the annunciator regardless of notifications
+  let manualSound = false
   let discovered: { modelId?: string; serial?: string } = {}
+  // addresses confirmed as annunciators by an address claim; a 126996 alone
+  // cannot identify one, as it carries no manufacturer code
+  const confirmed = new Set<number>()
 
   plugin.id = PLUGIN_ID
   plugin.name = 'Maretron Annunciator'
@@ -60,19 +68,28 @@ module.exports = function (app: any) {
         type: 'number',
         title: 'Annunciator address (leave empty to discover)',
         description:
-          'The NMEA 2000 address of the annunciator. Normally discovered automatically from its address claim; set this only if discovery does not find it.'
+          'The NMEA 2000 address of the annunciator. Normally discovered automatically from its address claim; set this only if discovery does not find it.',
+        minimum: 0,
+        maximum: 251,
+        multipleOf: 1
       },
       instance: {
         type: 'number',
         title: 'Annunciator instance',
-        default: 0
+        default: 0,
+        minimum: 0,
+        maximum: 252,
+        multipleOf: 1
       },
       alertIdBase: {
         type: 'number',
         title: 'First alert id to use',
         description:
           'Alert ids are allocated from here, one per notification path. Keep this clear of the ids your other equipment already uses.',
-        default: 40000
+        default: 40000,
+        minimum: 0,
+        maximum: 65534,
+        multipleOf: 1
       },
       states: {
         type: 'array',
@@ -91,7 +108,8 @@ module.exports = function (app: any) {
           'The ALM100 reports five patterns. They differ in beep cadence rather than pitch; the device does not name them, so try them to find the one you want.',
         default: 4,
         minimum: PATTERN_MIN,
-        maximum: PATTERN_MAX
+        maximum: PATTERN_MAX,
+        multipleOf: 1
       },
       patternFor: {
         type: 'array',
@@ -109,7 +127,8 @@ module.exports = function (app: any) {
               type: 'number',
               title: 'Pattern (0-4)',
               minimum: PATTERN_MIN,
-              maximum: PATTERN_MAX
+              maximum: PATTERN_MAX,
+              multipleOf: 1
             }
           }
         }
@@ -140,7 +159,9 @@ module.exports = function (app: any) {
     alertIds = new AlertIds(options.alertIdBase)
     deviceAddress = options.deviceAddress
     active.clear()
+    confirmed.clear()
     sounding = undefined
+    manualSound = false
 
     app.on('nmea2000OutAvailable', onOutAvailable)
     unsubscribes.push(() =>
@@ -184,13 +205,22 @@ module.exports = function (app: any) {
     if (!outAvailable) {
       outAvailable = true
       app.debug('NMEA 2000 output is available')
+      // The gateway is usually not ready when the plugin starts, so this is
+      // where discovery actually gets to happen.
+      if (deviceAddress === undefined) {
+        requestAddressClaims()
+      }
+      // Anything that went active while we had no way to send it still needs
+      // announcing.
+      reconcile()
       updateStatus()
     }
   }
 
   function onN2K(pgn: any) {
-    const found = identifyAnnunciator(pgn)
+    const found = identifyAnnunciator(pgn, confirmed)
     if (found !== undefined) {
+      confirmed.add(found)
       if (pgn.pgn === 126996) {
         discovered = productDetails(pgn)
       }
@@ -217,7 +247,9 @@ module.exports = function (app: any) {
   }
 
   function requestAddressClaims() {
-    if (!canSend()) {
+    // Deliberately not gated on canSend(): this is what finds the address in
+    // the first place, and it is a broadcast, so it needs no destination.
+    if (!outAvailable) {
       return
     }
     // ISO Request for 60928, broadcast. Every device answers with its claim.
@@ -272,19 +304,12 @@ module.exports = function (app: any) {
     }
   }
 
-  /** Bring the annunciator into line with the set of active notifications. */
+  /**
+   * Bring the annunciator into line with what should be sounding: the most
+   * severe active notification, or manual control from the PUT handler.
+   */
   function reconcile() {
     if (!options.enabled) {
-      if (sounding !== undefined) {
-        silence(sounding)
-      }
-      updateStatus()
-      return
-    }
-
-    const worst = mostSevere()
-
-    if (!worst) {
       if (sounding !== undefined) {
         silence(sounding)
       }
@@ -293,10 +318,28 @@ module.exports = function (app: any) {
       return
     }
 
-    const alertId = alertIds.idFor(worst.path)
+    const worst = mostSevere()
+
+    if (!worst && !manualSound) {
+      if (sounding !== undefined) {
+        silence(sounding)
+      }
+      stopRepeat()
+      updateStatus()
+      return
+    }
+
+    // A real notification wins over manual control, so a test left switched on
+    // cannot mask an actual alarm.
+    const path = worst ? worst.path : MANUAL_PATH
+    const pattern = worst
+      ? patternFor(worst.value.state)
+      : options.defaultPattern
+
+    const alertId = alertIds.idFor(path)
     if (alertId === undefined) {
       app.error(
-        `no alert id left for ${worst.path}; raise the alert id range if you have more than 64 sounding notifications`
+        `no alert id left for ${path}; raise the alert id range if you have more than 64 sounding notifications`
       )
       return
     }
@@ -307,8 +350,8 @@ module.exports = function (app: any) {
       silence(sounding)
     }
 
-    sound(alertId, patternFor(worst.value.state))
-    startRepeat(alertId, patternFor(worst.value.state))
+    sound(alertId, pattern)
+    startRepeat(alertId, pattern)
     updateStatus()
   }
 
@@ -395,7 +438,6 @@ module.exports = function (app: any) {
       'vessels.self',
       path,
       (_context: string, _p: string, value: any) => {
-        const on = value === true || value === 'on' || value === 1
         if (deviceAddress === undefined) {
           return {
             state: 'COMPLETED',
@@ -403,19 +445,14 @@ module.exports = function (app: any) {
             message: 'no annunciator found'
           }
         }
-        const id = alertIds.idFor(path)
-        if (id === undefined) {
-          return {
-            state: 'COMPLETED',
-            statusCode: 507,
-            message: 'no alert id left'
-          }
-        }
-        if (on) {
-          sound(id, options.defaultPattern)
-        } else {
-          silence(id)
-        }
+        // Manual control is held as its own state so reconcile() can weigh it
+        // against the notifications rather than the two fighting over the
+        // device. Turning it on sounds the annunciator even with nothing
+        // active; turning it off hands control back to the notifications,
+        // which may immediately sound it again if something is still active.
+        manualSound = value === true || value === 'on' || value === 1
+        app.debug('manual annunciator control: %s', manualSound ? 'on' : 'off')
+        reconcile()
         return { state: 'COMPLETED', statusCode: 200 }
       }
     )

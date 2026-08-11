@@ -58,26 +58,41 @@ describe('AlertIds', () => {
     expect(a).to.not.equal(b)
   })
 
-  it('allocates from the configured base', () => {
-    const ids = new AlertIds(50000)
-    expect(ids.idFor('notifications.a')).to.equal(50000)
-    expect(ids.idFor('notifications.b')).to.equal(50001)
+  it('allocates inside the configured range', () => {
+    const ids = new AlertIds(50000, 64)
+    const id = ids.idFor('notifications.a') as number
+    expect(id).to.be.at.least(50000)
+    expect(id).to.be.below(50064)
+  })
+
+  it('gives a path the same id whatever order paths arrive in', () => {
+    const forwards = new AlertIds(40000)
+    const backwards = new AlertIds(40000)
+    const paths = ['notifications.a', 'notifications.b', 'notifications.c']
+    paths.forEach((p) => forwards.idFor(p))
+    ;[...paths].reverse().forEach((p) => backwards.idFor(p))
+    paths.forEach((p) => {
+      expect(backwards.idFor(p)).to.equal(forwards.idFor(p))
+    })
   })
 
   it('reports what it has handed out', () => {
     const ids = new AlertIds(40000)
-    ids.idFor('notifications.a')
-    ids.idFor('notifications.b')
-    expect(ids.allocated()).to.deep.equal([40000, 40001])
+    const a = ids.idFor('notifications.a')
+    const b = ids.idFor('notifications.b')
+    expect(ids.allocated().sort()).to.deep.equal([a, b].sort())
   })
 
   it('runs out rather than colliding with ids outside its range', () => {
     const ids = new AlertIds(40000, 2)
-    expect(ids.idFor('a')).to.equal(40000)
-    expect(ids.idFor('b')).to.equal(40001)
+    const a = ids.idFor('a')
+    const b = ids.idFor('b')
+    expect(a).to.not.equal(undefined)
+    expect(b).to.not.equal(undefined)
+    expect(a).to.not.equal(b)
     expect(ids.idFor('c')).to.equal(undefined)
     // and still remembers the ones it did allocate
-    expect(ids.idFor('a')).to.equal(40000)
+    expect(ids.idFor('a')).to.equal(a)
   })
 
   it('reports its range so it can be kept clear of other equipment', () => {

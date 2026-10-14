@@ -56,7 +56,8 @@ fix: cap the repeat interval so it cannot wrap Node's timer
 docs: explain how alert ids are allocated
 ```
 
-- Types in use: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`.
+- Types in use: `feat`, `fix`, `perf`, `docs`, `test`, `refactor`, `build`,
+  `ci`, `chore`. The type decides the release: see "CI and releasing".
 - Scope is optional and is a module name (`command`, `device`, `alerts`) when
   the change is confined to one.
 - Subject in the imperative mood, lower case, no trailing period.
@@ -103,24 +104,40 @@ into a real server. That matches `engines.node` of `>=22`.
 through the manual trigger — note it runs Node 20 on Venus OS, which is below
 this plugin's floor.
 
-Releases are tag-driven. Pushing a `v*` tag runs
-`.github/workflows/publish.yml`, which creates the GitHub release and publishes
-to npm:
+Releases are cut by release-please (`.github/workflows/release-please.yml`).
+A push to `main` that carries a change users get keeps a standing
+`chore(release): X.Y.Z` pull request up to date: the version bump in
+`package.json` and `.release-please-manifest.json`, with release notes GitHub
+generates from the merged PR titles. Merging that PR creates the tag and the
+GitHub Release, then dispatches `.github/workflows/publish.yml` on the tag,
+which checks the tag against `package.json`, builds, tests and publishes to npm.
+Do not bump the version or push a release tag by hand.
 
-```sh
-npm version minor        # or patch / major
-git push --follow-tags
-```
+The commit type decides the version: `feat` is a minor, `fix` and `perf` a
+patch, a `!` after the type or a `BREAKING CHANGE:` footer a major. A
+`build(deps):` commit, which Dependabot writes for a runtime dependency, is a
+patch too. `docs`, `test`, `refactor`, `build(deps-dev)`, `ci` and `chore`
+ship with the next release without causing one. To release a different
+version, push an empty commit with a `Release-As: X.Y.Z` footer. After a
+change to the release configuration, Actions → release-please → Run workflow
+rebuilds the open release PR.
+
+PR titles become the release notes. `.github/workflows/label-by-title.yml`
+labels each PR from its title's type, and `.github/release.yml` sorts the notes
+by those labels.
 
 Publishing uses **npm trusted publishing over OIDC**: the workflow requests
 `id-token: write` and npm mints a short-lived credential from it. There is no
 npm token in the repository secrets, and none should ever be added — adding one
 would quietly replace a scoped, expiring credential with a long-lived one.
+npm binds the trust to the workflow file, so `publish.yml` must keep its name.
 Packages are published with `--provenance`, so npm records which workflow and
 commit built them.
 
-Tags containing `-beta.` or `-rc.` publish under the `beta` dist-tag rather than
-`latest`.
+A pre-release is cut by hand, away from `main`: a commit that sets
+`package.json` to `X.Y.Z-beta.N`, tagged `vX.Y.Z-beta.N` and pushed.
+`publish.yml` then creates its Release and publishes it under the `beta`
+dist-tag rather than `latest`; `-rc.` tags do the same.
 
 ## Working on the protocol
 

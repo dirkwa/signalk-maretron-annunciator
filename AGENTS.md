@@ -42,7 +42,7 @@ directly, so the first path succeeds and `mod.default` is picked up. Both routes
 are exercised — `npm test` runs the suite as ESM, and CI installs the plugin
 into a real server on every supported Node version.
 
-No bundler is needed: this is four small modules with one runtime dependency.
+No bundler is needed: this is four small modules with no runtime dependencies.
 A bundler such as Vite would earn its place only if a webapp or admin-UI panel
 were added, since those need module federation. Do not add one otherwise.
 

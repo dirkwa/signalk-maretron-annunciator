@@ -1,6 +1,6 @@
 {
   "name": "signalk-maretron-annunciator",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Sound a Maretron ALM100 annunciator from Signal K notifications",
   "type": "module",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
     "mocha": "^12.0.3",
     "prettier": "^3.3.3",
     "tsx": "^4.19.0",
-    "typescript": "^7.0.2"
+    "typescript": "^5.8.3"
   },
   "scripts": {
     "build": "tsc -b --pretty false",

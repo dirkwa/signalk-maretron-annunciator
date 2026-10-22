@@ -14,7 +14,8 @@ import {
   identifyAnnunciator,
   productDetails
 } from './device.js'
-import { AlertIds, isSounding, severityOf, wantsSound } from './alerts.js'
+import { AlertIds, severityOf } from './alerts.js'
+import { compileRules, decide, type CompiledRule, type Rule } from './rules.js'
 
 const PLUGIN_ID = 'signalk-maretron-annunciator'
 
@@ -33,6 +34,7 @@ interface Options {
   patternFor: { state: string; pattern: number }[]
   defaultPattern: number
   repeatSeconds: number
+  rules: Rule[]
 }
 
 export default function (app: any) {
@@ -42,10 +44,12 @@ export default function (app: any) {
   let options: Options
   let deviceAddress: number | undefined
   let alertIds: AlertIds
+  let rules: CompiledRule[] = []
   let outAvailable = false
   let repeatTimer: NodeJS.Timeout | undefined
-  // path -> notification value, for every notification currently asking to sound
-  const active = new Map<string, any>()
+  // path -> notification value, and a rule's pattern for it, for every
+  // notification currently sounding
+  const active = new Map<string, { value: any; pattern?: number }>()
   // the alert id we last told the device to sound, so we can silence that one
   let sounding: number | undefined
   // the path that id was sounded for: a released id can come straight back
@@ -151,6 +155,48 @@ export default function (app: any) {
         minimum: 0,
         maximum: MAX_REPEAT_SECONDS,
         multipleOf: 1
+      },
+      rules: {
+        type: 'array',
+        title: 'Rules',
+        description:
+          'Checked in order; the first rule a notification matches decides whether it sounds. A notification no rule matches sounds if its state is one of the states above. Either way, only a notification asking to be heard sounds, so acknowledging it anywhere still silences the annunciator.',
+        items: {
+          type: 'object',
+          required: ['path', 'action'],
+          properties: {
+            path: {
+              type: 'string',
+              title: 'Notification path',
+              description:
+                '* matches within one part of the path, ** across parts, e.g. notifications.nmea.** or notifications.navigation.anchor'
+            },
+            message: {
+              type: 'string',
+              title: 'Message contains (optional)',
+              description: 'Ignores case, e.g. Highwater'
+            },
+            source: {
+              type: 'string',
+              title: 'Source (optional)',
+              description:
+                'The notification source as the Data Browser shows it; * matches any characters, e.g. IPG100.*'
+            },
+            action: {
+              type: 'string',
+              title: 'Then: sound the annunciator, or keep it silent',
+              enum: ['sound', 'silent'],
+              default: 'silent'
+            },
+            pattern: {
+              type: 'number',
+              title: 'Pattern when sounding (0-4, optional)',
+              minimum: PATTERN_MIN,
+              maximum: PATTERN_MAX,
+              multipleOf: 1
+            }
+          }
+        }
       }
     }
   })
@@ -166,8 +212,10 @@ export default function (app: any) {
       states: opts.states ?? ['alarm', 'emergency'],
       patternFor: opts.patternFor ?? [],
       defaultPattern: opts.defaultPattern ?? 4,
-      repeatSeconds: opts.repeatSeconds ?? 30
+      repeatSeconds: opts.repeatSeconds ?? 30,
+      rules: opts.rules ?? []
     }
+    rules = compileRules(options.rules)
 
     alertIds = new AlertIds(options.alertIdBase)
     deviceAddress = options.deviceAddress
@@ -290,21 +338,19 @@ export default function (app: any) {
   function onDelta(delta: any) {
     let changed = false
     delta.updates?.forEach((update: any) => {
+      const source = update.$source ?? update.source?.label
       update.values?.forEach((value: any) => {
         if (!value?.path?.startsWith('notifications.')) {
           return
         }
         const v = value.value
-        const shouldSound =
-          wantsSound(v) &&
-          isSounding(v.state) &&
-          options.states.indexOf(v.state) !== -1
+        const decision = decide(rules, value.path, v, source, options.states)
 
-        if (shouldSound) {
+        if (decision.sound) {
           if (!active.has(value.path)) {
             app.debug('%s went %s', value.path, v.state)
           }
-          active.set(value.path, v)
+          active.set(value.path, { value: v, pattern: decision.pattern })
           changed = true
         } else if (active.delete(value.path)) {
           alertIds.release(value.path)
@@ -347,7 +393,7 @@ export default function (app: any) {
     // cannot mask an actual alarm.
     const path = worst ? worst.path : MANUAL_PATH
     const pattern = worst
-      ? patternFor(worst.value.state)
+      ? clampPattern(worst.pattern ?? patternFor(worst.value.state))
       : options.defaultPattern
 
     const alertId = alertIds.idFor(path)
@@ -373,11 +419,12 @@ export default function (app: any) {
     updateStatus()
   }
 
-  function mostSevere(): { path: string; value: any } | undefined {
-    let best: { path: string; value: any } | undefined
-    active.forEach((value, path) => {
+  function mostSevere():
+    { path: string; value: any; pattern?: number } | undefined {
+    let best: { path: string; value: any; pattern?: number } | undefined
+    active.forEach(({ value, pattern }, path) => {
       if (!best || severityOf(value.state) > severityOf(best.value.state)) {
-        best = { path, value }
+        best = { path, value, pattern }
       }
     })
     return best
@@ -385,7 +432,10 @@ export default function (app: any) {
 
   function patternFor(state: string): number {
     const found = options.patternFor.find((p) => p.state === state)
-    const pattern = found?.pattern ?? options.defaultPattern
+    return clampPattern(found?.pattern ?? options.defaultPattern)
+  }
+
+  function clampPattern(pattern: number): number {
     return Math.min(PATTERN_MAX, Math.max(PATTERN_MIN, pattern))
   }
 

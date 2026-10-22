@@ -98,6 +98,23 @@ describe('AlertIds', () => {
     expect(ids.idFor('a')).to.equal(a)
   })
 
+  it('hands a released id out again, so a long run never runs out', () => {
+    const ids = new AlertIds(40000, 2)
+    ids.idFor('a')
+    ids.idFor('b')
+    expect(ids.idFor('c')).to.equal(undefined)
+    ids.release('a')
+    expect(ids.idFor('c')).to.not.equal(undefined)
+    expect(ids.allocated()).to.have.length(2)
+  })
+
+  it('gives a released path its old id back while that id is free', () => {
+    const ids = new AlertIds(40000)
+    const a = ids.idFor('notifications.a')
+    ids.release('notifications.a')
+    expect(ids.idFor('notifications.a')).to.equal(a)
+  })
+
   it('reports its range so it can be kept clear of other equipment', () => {
     expect(new AlertIds(40000, 64).range()).to.deep.equal({
       first: 40000,

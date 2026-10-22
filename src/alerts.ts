@@ -97,7 +97,17 @@ export class AlertIds {
     return undefined
   }
 
-  /** Every id handed out so far, for registering bindings on start. */
+  /**
+   * Gives a path's id back once the path has stopped sounding. Otherwise
+   * every path that ever sounded would keep its id, and once the range was
+   * used up the annunciator would fall silent for good. A path that sounds
+   * again gets its old id back unless a colliding path has taken it since.
+   */
+  release(path: string): void {
+    this.byPath.delete(path)
+  }
+
+  /** The ids held right now. */
   allocated(): number[] {
     return [...this.byPath.values()]
   }

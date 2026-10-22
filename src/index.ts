@@ -304,6 +304,7 @@ export default function (app: any) {
           active.set(value.path, v)
           changed = true
         } else if (active.delete(value.path)) {
+          alertIds.release(value.path)
           app.debug('%s cleared', value.path)
           changed = true
         }

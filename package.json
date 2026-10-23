@@ -1,6 +1,6 @@
 {
   "name": "signalk-maretron-annunciator",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Sound a Maretron ALM100 annunciator from Signal K notifications",
   "type": "module",
   "main": "dist/index.js",

@@ -26,10 +26,12 @@ export interface Rule {
 
 export interface CompiledRule {
   rule: Rule
-  path: RegExp
-  source?: RegExp
+  path: Matcher
+  source?: Matcher
   message?: string
 }
+
+type Matcher = (text: string) => boolean
 
 export interface Decision {
   sound: boolean
@@ -57,8 +59,8 @@ export function compileRules(rules: unknown): CompiledRule[] {
     )
     .map((rule) => ({
       rule,
-      path: glob(rule.path, '[^.]*'),
-      source: rule.source ? glob(rule.source, '.*') : undefined,
+      path: glob(rule.path, true),
+      source: rule.source ? glob(rule.source, false) : undefined,
       message: rule.message ? rule.message.toLowerCase() : undefined
     }))
 }
@@ -94,10 +96,10 @@ function matches(
   value: any,
   source: string | undefined
 ): boolean {
-  if (!r.path.test(path)) {
+  if (!r.path(path)) {
     return false
   }
-  if (r.source && !(source !== undefined && r.source.test(source))) {
+  if (r.source && !(source !== undefined && r.source(source))) {
     return false
   }
   if (r.message) {
@@ -109,16 +111,55 @@ function matches(
   return true
 }
 
-/** A whole-string pattern where `**` matches anything and `*` matches `star`. */
-function glob(pattern: string, star: string): RegExp {
-  const body = pattern
-    .split('**')
-    .map((part) =>
-      part
-        .split('*')
-        .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
-        .join(star)
-    )
-    .join('.*')
-  return new RegExp(`^${body}$`)
+const ANY = 0
+const ANY_IN_PART = 1
+
+/**
+ * A whole-string match where `**` matches anything and `*` matches anything
+ * too, or only within one `.`-separated part when `inPart`. It tracks every
+ * pattern position the text read so far can reach, so a match takes at most
+ * pattern length times text length steps. A regular expression of the same
+ * pattern backtracks, exponentially in the number of wildcards.
+ */
+function glob(pattern: string, inPart: boolean): Matcher {
+  const tokens: (string | typeof ANY | typeof ANY_IN_PART)[] = []
+  for (let i = 0; i < pattern.length; i++) {
+    if (pattern[i] !== '*') {
+      tokens.push(pattern[i]!)
+    } else if (pattern[i + 1] === '*') {
+      tokens.push(ANY)
+      i++
+    } else {
+      tokens.push(inPart ? ANY_IN_PART : ANY)
+    }
+  }
+  // A wildcard can also match nothing, so reaching it reaches what follows.
+  const skipWildcards = (reach: boolean[]) => {
+    for (let i = 0; i < tokens.length; i++) {
+      if (reach[i] && typeof tokens[i] === 'number') {
+        reach[i + 1] = true
+      }
+    }
+    return reach
+  }
+  return (text) => {
+    let reach = skipWildcards([true])
+    for (let k = 0; k < text.length; k++) {
+      const c = text[k]
+      const next: boolean[] = []
+      for (let i = 0; i < tokens.length; i++) {
+        if (!reach[i]) {
+          continue
+        }
+        const t = tokens[i]
+        if (t === ANY || (t === ANY_IN_PART && c !== '.')) {
+          next[i] = true
+        } else if (t === c) {
+          next[i + 1] = true
+        }
+      }
+      reach = skipWildcards(next)
+    }
+    return reach[tokens.length] === true
+  }
 }

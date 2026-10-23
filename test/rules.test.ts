@@ -149,6 +149,15 @@ describe('path patterns', () => {
   it('takes everything else literally', () => {
     expect(quiet('notifications.a', 'notifications.ab')).to.equal(false)
     expect(quiet('notifications.a', 'notificationsXa')).to.equal(false)
+    expect(quiet('notifications.a+', 'notifications.aa')).to.equal(false)
+    expect(quiet('notifications.a+', 'notifications.a+')).to.equal(true)
+  })
+
+  it('answers a pattern of many wildcards against a long part at once', () => {
+    // As a regular expression, the first match backtracks for over a minute.
+    const path = 'notifications.' + 'a'.repeat(600)
+    expect(quiet('notifications.*a*a*a*ab', path)).to.equal(false)
+    expect(quiet('notifications.*a*a*a*a', path)).to.equal(true)
   })
 })
 

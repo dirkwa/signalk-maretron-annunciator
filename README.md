@@ -40,6 +40,7 @@ different one.
 | Default pulse pattern | 4 | 0 to 4 |
 | Pattern per state | none | Optionally give each state its own pattern |
 | Repeat every | 30 s | Re-sends the sound command as a guard against a lost frame; 0 disables |
+| Rules | none | Decide per notification whether it sounds; see below |
 
 ### Notification states
 
@@ -49,6 +50,35 @@ silent. `normal` and `nominal` are treated as cleared.
 
 When several notifications are active at once the most severe one wins:
 `emergency` > `alarm` > `alert` > `warn`.
+
+### Rules
+
+A boat with an alarm system on its bus raises many notifications that are
+worth seeing but not worth being woken by. The state alone cannot tell a
+sensor-loop fault from a real fire alarm, so rules can name notifications by
+path, message or source and decide for each one.
+
+Rules are checked in order, and the first one a notification matches decides.
+A notification that matches no rule sounds if its state is one of **States that
+sound**. A rule never makes a notification sound that does not ask to be heard,
+so acknowledging an alert anywhere still silences the annunciator.
+
+| Field | Matches |
+|---|---|
+| Notification path | The path. `*` matches within one part, `**` across parts: `notifications.nmea.**`, `notifications.*.anchor` |
+| Message contains | Text in the notification's message, ignoring case (optional) |
+| Source | The notification's `$source`. `*` matches any characters, as in `IPG100.*` (optional) |
+| Then | `sound` sounds it in any state from `warn` up; `silent` never sounds it |
+| Pattern | For `sound`, a pattern instead of the one for the state (optional) |
+
+For example, to hear a high-water alarm from the bilge sensors, which the alarm
+panel raises only as a warning, but not the sensor-loop faults the same panel
+reports:
+
+| Path | Message contains | Then | Pattern |
+|---|---|---|---|
+| `notifications.nmea.**` | `Highwater` | sound | 1 |
+| `notifications.nmea.**` | `8Ohm` | silent | |
 
 ### Alert ids
 

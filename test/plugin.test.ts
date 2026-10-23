@@ -99,4 +99,40 @@ describe('plugin', () => {
     ])
     plugin.stop()
   })
+
+  it('follows the rules for which notifications sound, and with what pattern', () => {
+    const server = fakeServer()
+    const plugin = createPlugin(server.app)
+    plugin.start({
+      deviceAddress: 5,
+      repeatSeconds: 0,
+      rules: [
+        { path: 'notifications.nmea.**', message: '8Ohm', action: 'silent' },
+        {
+          path: 'notifications.nmea.**',
+          message: 'Highwater',
+          action: 'sound',
+          pattern: 1
+        }
+      ]
+    })
+    server.outAvailable()
+
+    server.notify('notifications.nmea.alarm.navigational.22.20500', {
+      state: 'alarm',
+      method: ['visual', 'sound'],
+      message: 'Fire 8Ohm'
+    })
+    expect(server.sent).to.have.length(0)
+
+    server.notify('notifications.nmea.warning.navigational.22.8196', {
+      state: 'warn',
+      method: ['visual', 'sound'],
+      message: 'Highwater'
+    })
+    expect(server.sent).to.have.length(1)
+    expect(soundParameter(server.sent[0])).to.equal(100)
+    expect(parameter(server.sent[0], 6)).to.equal(1)
+    plugin.stop()
+  })
 })

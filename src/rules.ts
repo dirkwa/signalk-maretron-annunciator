@@ -36,7 +36,10 @@ export interface Decision {
   pattern?: number
 }
 
-/** Rules in the order given, without entries that name no path or action. */
+/**
+ * Rules in the order given, without entries a hand-edited configuration got
+ * wrong: no path or action, or a message, source or pattern of the wrong type.
+ */
 export function compileRules(rules: unknown): CompiledRule[] {
   if (!Array.isArray(rules)) {
     return []
@@ -47,7 +50,10 @@ export function compileRules(rules: unknown): CompiledRule[] {
         r != null &&
         typeof r.path === 'string' &&
         r.path.length > 0 &&
-        (r.action === 'sound' || r.action === 'silent')
+        (r.action === 'sound' || r.action === 'silent') &&
+        (r.message === undefined || typeof r.message === 'string') &&
+        (r.source === undefined || typeof r.source === 'string') &&
+        (r.pattern === undefined || Number.isInteger(r.pattern))
     )
     .map((rule) => ({
       rule,

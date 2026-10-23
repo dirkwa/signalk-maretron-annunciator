@@ -164,4 +164,16 @@ describe('compileRules', () => {
     ).to.have.length(1)
     expect(compileRules(undefined)).to.deep.equal([])
   })
+
+  it('drops entries whose message, source or pattern has the wrong type', () => {
+    const rules = compileRules([
+      { path: 'x', action: 'silent', message: 8 },
+      { path: 'x', action: 'silent', source: 5 },
+      { path: 'x', action: 'sound', pattern: 'loud' },
+      { path: 'x', action: 'sound', pattern: 1.5 },
+      { path: 'x', action: 'sound', message: 'ok', source: 'IPG*', pattern: 2 }
+    ])
+    expect(rules).to.have.length(1)
+    expect(rules[0]?.rule.pattern).to.equal(2)
+  })
 })

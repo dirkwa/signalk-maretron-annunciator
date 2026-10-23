@@ -48,6 +48,9 @@ export default function (app: any) {
   const active = new Map<string, any>()
   // the alert id we last told the device to sound, so we can silence that one
   let sounding: number | undefined
+  // the path that id was sounded for: a released id can come straight back
+  // for another path, and the device must hear a silence before it
+  let soundingPath: string | undefined
   // set by the PUT handler; sounds the annunciator regardless of notifications
   let manualSound = false
   let discovered: { modelId?: string; serial?: string } = {}
@@ -356,12 +359,16 @@ export default function (app: any) {
     }
 
     // Switching between alerts: silence the old id first so the device is not
-    // left with a stale binding sounding.
-    if (sounding !== undefined && sounding !== alertId) {
+    // left with a stale binding sounding. That holds when the new alert got
+    // the same id back, freed by the one that just cleared.
+    if (
+      sounding !== undefined &&
+      (sounding !== alertId || soundingPath !== path)
+    ) {
       silence(sounding)
     }
 
-    sound(alertId, pattern)
+    sound(alertId, pattern, path)
     startRepeat(alertId, pattern)
     updateStatus()
   }
@@ -382,16 +389,18 @@ export default function (app: any) {
     return Math.min(PATTERN_MAX, Math.max(PATTERN_MIN, pattern))
   }
 
-  function sound(alertId: number, pattern: number) {
+  function sound(alertId: number, pattern: number, path: string) {
     if (!send(true, alertId, pattern)) {
       return
     }
     sounding = alertId
+    soundingPath = path
   }
 
   function silence(alertId: number) {
     send(false, alertId, 0)
     sounding = undefined
+    soundingPath = undefined
   }
 
   function send(sounding: boolean, alertId: number, pattern: number): boolean {
